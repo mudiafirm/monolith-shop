@@ -1,6 +1,68 @@
+import { useEffect, useState } from 'react'
+import { Link, Routes, Route } from 'react-router-dom'
+import ProductDetails from './ProductDetails.jsx'
+import Cart from './Cart.jsx'
+import Checkout from './Checkout.jsx'
+import Login from './Login.jsx'
+import MyOrders from './MyOrders.jsx'
+import Register from './Register.jsx'
+import Profile from './Profile.jsx'
+import AdminDashboard from './AdminDashboard'
+import AdminPayments from './AdminPayments'
+import AdminProducts from './AdminProducts'
+import AdminOrders from './AdminOrders'
+import AdminCustomers from './AdminCustomers';
 import './App.css'
 
-function App() {
+function HomePage({ cart, addToCart, token, setToken }) {
+  const [products, setProducts] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [productError, setProductError] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [loadingProductDetails, setLoadingProductDetails] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load products')
+        }
+
+        return response.json()
+      })
+      .then((data) => {
+        setProducts(data.products || [])
+        setLoadingProducts(false)
+      })
+      .catch((error) => {
+        console.error('Product loading error:', error)
+        setProductError('Unable to load products at the moment.')
+        setLoadingProducts(false)
+      })
+  }, [])
+
+  const viewProduct = async (productId) => {
+    setLoadingProductDetails(true)
+    setSelectedProduct(null)
+
+    try {
+      const response = await fetch(`/api/products/${productId}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to load product details')
+      }
+
+      const data = await response.json()
+
+      setSelectedProduct(data.product)
+    } catch (error) {
+      console.error('Product details error:', error)
+      setProductError('Unable to load product details.')
+    } finally {
+      setLoadingProductDetails(false)
+    }
+  }
+
   return (
     <div className="site">
 
@@ -22,6 +84,39 @@ function App() {
             <a href="#administrative">Administrative Services</a>
             <a href="#products">Products</a>
             <a href="#contact">Contact</a>
+         
+<Link to="/cart">
+  Cart
+  {cart.length > 0 && (
+    <span className="cart-count">
+      {cart.reduce((total, item) => total + item.quantity, 0)}
+    </span>
+  )}
+</Link>
+
+{token ? (
+  <>
+    <Link to="/orders">My Orders</Link>
+    <Link to="/account">My Account</Link>
+
+    <button
+      type="button"
+      className="nav-logout"
+      onClick={() => {
+        localStorage.removeItem('token')
+        setToken('')
+      }}
+    >
+      Logout
+    </button>
+  </>
+) : (
+  <>
+    <Link to="/login">Login</Link>
+    <Link to="/register">Register</Link>
+  </>
+)}   
+
           </nav>
         </div>
       </header>
@@ -194,43 +289,112 @@ function App() {
           </div>
         </div>
       </section>
+            {loadingProductDetails && (
+        <section className="section">
+          <div className="container">
+            <p>Loading product details...</p>
+          </div>
+        </section>
+      )}
 
-      {/* Products */}
+      {selectedProduct && !loadingProductDetails && (
+        <section className="section">
+          <div className="container">
+            <p className="section-label">PRODUCT DETAILS</p>
+
+            <h2>{selectedProduct.name}</h2>
+
+            <p className="section-intro">
+              {selectedProduct.description}
+            </p>
+
+            <div className="product-card">
+              <p className="product-price">
+                ₦{Number(selectedProduct.price).toLocaleString('en-NG')}
+              </p>
+
+              <p>
+                {selectedProduct.stock > 0
+                  ? `${selectedProduct.stock} available`
+                  : 'Out of stock'}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSelectedProduct(null)}
+              >
+                Back to Products
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+            {/* Products */}
       <section id="products" className="section section-light">
         <div className="container">
           <p className="section-label">PRODUCTS</p>
+
           <h2>Power Products & Equipment</h2>
 
           <p className="section-intro">
-            Browse our range of solar and power products. Our product
-            catalogue will later connect directly to the NadiaFirm database.
+            Browse our range of solar and power products available from
+            NadiaFirm Systems & Services.
           </p>
 
-          <div className="product-grid">
-            <div className="product-card">
-              <div className="product-placeholder">☀️</div>
-              <h3>Solar Panels</h3>
-              <p>High-quality solar panels for residential and commercial applications.</p>
-            </div>
+          {loadingProducts && (
+            <p>Loading products...</p>
+          )}
 
-            <div className="product-card">
-              <div className="product-placeholder">⚡</div>
-              <h3>Solar Inverters</h3>
-              <p>Reliable inverter solutions for different power requirements.</p>
-            </div>
+          {productError && (
+            <p>{productError}</p>
+          )}
 
-            <div className="product-card">
-              <div className="product-placeholder">🔋</div>
-              <h3>Batteries</h3>
-              <p>Energy-storage solutions for backup and solar applications.</p>
-            </div>
+          {!loadingProducts && !productError && products.length === 0 && (
+            <p>No products are currently available.</p>
+          )}
 
-            <div className="product-card">
-              <div className="product-placeholder">🔌</div>
-              <h3>Accessories</h3>
-              <p>Essential equipment and accessories for solar installations.</p>
+          {!loadingProducts && !productError && products.length > 0 && (
+            <div className="product-grid">
+              {products.map((product) => (
+                <div className="product-card" key={product.id}>
+                  <div className="product-placeholder">⚡</div>
+
+                  <h3>{product.name}</h3>
+
+                  <p>{product.description}</p>
+
+                  <p className="product-price">
+                    ₦{Number(product.price).toLocaleString('en-NG')}
+                  </p>
+
+                  <p>
+                    {product.stock > 0
+                      ? `${product.stock} available`
+                      : 'Out of stock'}
+                  </p>
+
+                  <Link
+  to={`/products/${product.id}`}
+  className="product-button"
+>
+  View Product
+</Link>
+
+<button
+  type="button"
+  className="product-button"
+  onClick={() => {
+    console.log('ADD TO CART CLICKED', product)
+    addToCart(product)
+  }}
+>
+  Add to Cart
+</button>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -295,6 +459,143 @@ function App() {
       </footer>
 
     </div>
+  )
+}
+
+function App() {
+  const [cart, setCart] = useState([])
+  const [token, setToken] = useState(
+    () => localStorage.getItem('token') || ''
+  )
+
+  const addToCart = (product) => {
+    setCart((currentCart) => {
+      const existingProduct = currentCart.find(
+        (item) => item.id === product.id
+      )
+
+      if (existingProduct) {
+        return currentCart.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+
+      return [
+        ...currentCart,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ]
+    })
+  }
+
+  return (
+    <Routes>
+      <Route
+  path="/"
+  element={
+    <HomePage
+      cart={cart}
+      addToCart={addToCart}
+      token={token}
+      setToken={setToken}
+    />
+  }
+/>
+
+<Route
+  path="/admin"
+  element={
+    <AdminDashboard
+      token={token}
+    />
+  }
+/>
+
+<Route
+  path="/admin/products"
+  element={<AdminProducts />}
+/>
+
+<Route
+  path="/admin/orders"
+  element={<AdminOrders />}
+/>
+
+<Route path="/admin/customers" element={<AdminCustomers />} />
+<Route
+  path="/admin/payments"
+  element={<AdminPayments />}
+/>
+
+      <Route
+        path="/products/:id"
+        element={
+          <ProductDetails
+            addToCart={addToCart}
+          />
+        }
+      />
+
+      <Route
+  path="/cart"
+  element={
+    <Cart
+      cart={cart}
+      setCart={setCart}
+    />
+  }
+/>
+
+<Route
+  path="/login"
+  element={
+    <Login
+      setToken={setToken}
+    />
+  }
+/>
+
+<Route
+  path="/register"
+  element={
+    <Register />
+  }
+/>
+
+<Route
+  path="/orders"
+  element={
+    <MyOrders
+      token={token}
+    />
+  }
+/>
+
+<Route
+  path="/account"
+  element={
+    <Profile
+      token={token}
+      setToken={setToken}
+    />
+  }
+/>
+
+<Route
+  path="/checkout"
+  element={
+    <Checkout
+  cart={cart}
+  token={token}
+  setCart={setCart}
+/>
+  }
+/>
+    </Routes>
   )
 }
 

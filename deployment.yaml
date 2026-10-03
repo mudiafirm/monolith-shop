@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: monolith-api
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: monolith-api
+
+  template:
+    metadata:
+      labels:
+        app: monolith-api
+
+    spec:
+      serviceAccountName: monolith-api
+
+      containers:
+        - name: monolith-api
+          image: monolith-shop-api:2.0
+          imagePullPolicy: IfNotPresent
+
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+
+          ports:
+            - containerPort: 3000
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: monolith-config
+                  key: DB_HOST
+
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: monolith-config
+                  key: DB_PORT
+
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: monolith-config
+                  key: APP_ENV
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: monolith-api-secret
+                  key: JWT_SECRET

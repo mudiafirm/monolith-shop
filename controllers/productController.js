@@ -4,9 +4,31 @@ async function createProduct(req, res) {
     try {
         const { name, description, price, stock } = req.body;
 
-        if (!name || price === undefined || stock === undefined) {
+        // Validate name
+        if (typeof name !== 'string' || name.trim() === '') {
             return res.status(400).json({
-                message: 'Name, price and stock are required'
+                message: 'Product name is required'
+            });
+        }
+
+        // Validate price
+        const numericPrice = Number(price);
+
+        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+            return res.status(400).json({
+                message: 'Price must be a valid non-negative number'
+            });
+        }
+
+        // Validate stock
+        const numericStock = Number(stock);
+
+        if (
+            !Number.isInteger(numericStock) ||
+            numericStock < 0
+        ) {
+            return res.status(400).json({
+                message: 'Stock must be a non-negative integer'
             });
         }
 
@@ -14,7 +36,12 @@ async function createProduct(req, res) {
             `INSERT INTO products (name, description, price, stock)
              VALUES ($1, $2, $3, $4)
              RETURNING *`,
-            [name, description || null, price, stock]
+            [
+                name.trim(),
+                description || null,
+                numericPrice,
+                numericStock
+            ]
         );
 
         res.status(201).json({
@@ -85,9 +112,31 @@ async function updateProduct(req, res) {
         const { id } = req.params;
         const { name, description, price, stock } = req.body;
 
-        if (!name || price === undefined || stock === undefined) {
+        // Validate name
+        if (typeof name !== 'string' || name.trim() === '') {
             return res.status(400).json({
-                message: 'Name, price and stock are required'
+                message: 'Product name is required'
+            });
+        }
+
+        // Validate price
+        const numericPrice = Number(price);
+
+        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+            return res.status(400).json({
+                message: 'Price must be a valid non-negative number'
+            });
+        }
+
+        // Validate stock
+        const numericStock = Number(stock);
+
+        if (
+            !Number.isInteger(numericStock) ||
+            numericStock < 0
+        ) {
+            return res.status(400).json({
+                message: 'Stock must be a non-negative integer'
             });
         }
 
@@ -99,7 +148,13 @@ async function updateProduct(req, res) {
                  stock = $4
              WHERE id = $5
              RETURNING *`,
-            [name, description || null, price, stock, id]
+            [
+                name.trim(),
+                description || null,
+                numericPrice,
+                numericStock,
+                id
+            ]
         );
 
         if (result.rows.length === 0) {

@@ -144,7 +144,142 @@ async function getUserOrders(req, res) {
 }
 
 
+async function getAllOrders(req, res) {
+    try {
+        const result = await pool.query(
+            `SELECT
+                o.id,
+                o.user_id,
+                u.name AS customer_name,
+                u.email AS customer_email,
+                o.status,
+                o.total_amount,
+                o.created_at
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             ORDER BY o.created_at DESC`
+        );
+
+        res.json({
+            orders: result.rows
+        });
+
+    } catch (error) {
+        console.error('Get all orders error:', error);
+
+        res.status(500).json({
+            message: 'Internal server error'
+        });
+    }
+}
+
+
+async function getOrderById(req, res) {
+    try {
+        const { id } = req.params;
+
+        const orderResult = await pool.query(
+            `SELECT
+                o.id,
+                o.user_id,
+                u.name AS customer_name,
+                u.email AS customer_email,
+                o.status,
+                o.total_amount,
+                o.created_at
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             WHERE o.id = $1`,
+            [id]
+        );
+
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Order not found'
+            });
+        }
+
+        const itemsResult = await pool.query(
+            `SELECT
+                oi.id,
+                oi.product_id,
+                p.name AS product_name,
+                oi.quantity,
+                oi.unit_price,
+                oi.subtotal
+             FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             WHERE oi.order_id = $1
+             ORDER BY oi.id`,
+            [id]
+        );
+
+        res.json({
+            order: orderResult.rows[0],
+            items: itemsResult.rows
+        });
+
+    } catch (error) {
+        console.error('Get order error:', error);
+
+        res.status(500).json({
+            message: 'Internal server error'
+        });
+    }
+}
+
+
+async function updateOrderStatus(req, res) {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const allowedStatuses = [
+            'pending',
+            'processing',
+            'completed',
+            'cancelled'
+        ];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                message: 'Invalid order status'
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE orders
+             SET status = $1
+             WHERE id = $2
+             RETURNING *`,
+            [status, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Order not found'
+            });
+        }
+
+        res.json({
+            message: 'Order status updated successfully',
+            order: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Update order status error:', error);
+
+        res.status(500).json({
+            message: 'Internal server error'
+        });
+    }
+}
+
+
 module.exports = {
     createOrder,
-    getUserOrders
+    getUserOrders,
+    getAllOrders,
+    getOrderById,
+    updateOrderStatus
 };
