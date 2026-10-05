@@ -12,6 +12,7 @@ import AdminPayments from './AdminPayments'
 import AdminProducts from './AdminProducts'
 import AdminOrders from './AdminOrders'
 import AdminCustomers from './AdminCustomers';
+import ProtectedAdminRoute from './ProtectedAdminRoute'
 import './App.css'
 
 function HomePage({ cart, addToCart, token, setToken }) {
@@ -506,30 +507,13 @@ function App() {
   }
 />
 
-<Route
-  path="/admin"
-  element={
-    <AdminDashboard
-      token={token}
-    />
-  }
-/>
-
-<Route
-  path="/admin/products"
-  element={<AdminProducts />}
-/>
-
-<Route
-  path="/admin/orders"
-  element={<AdminOrders />}
-/>
-
-<Route path="/admin/customers" element={<AdminCustomers />} />
-<Route
-  path="/admin/payments"
-  element={<AdminPayments />}
-/>
+<Route element={<ProtectedAdminRoute />}>
+  <Route path="/admin" element={<AdminDashboard />} />
+  <Route path="/admin/products" element={<AdminProducts />} />
+  <Route path="/admin/orders" element={<AdminOrders />} />
+  <Route path="/admin/customers" element={<AdminCustomers />} />
+  <Route path="/admin/payments" element={<AdminPayments />} />
+</Route>
 
       <Route
         path="/products/:id"
